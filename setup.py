@@ -8,4 +8,7 @@ setup(name='pyparak',
       author_email='rmdaliri@gmail.com',
       license='MIT',
       packages=['pyparak'],
+      install_requires=[
+          'pay-ir',
+      ],
       zip_safe=False)
