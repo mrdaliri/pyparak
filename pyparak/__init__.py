@@ -12,10 +12,10 @@ class BaseGateway(object):
 
 
 class ZarinpalGateway(BaseGateway):
-    def send(user, pk):
+    def send(user):
         result = zarinpal_client.service.PaymentRequest(
             user['merchant'], user['amount'], user['description'], user['email'], user['mobile'],
-            user['CallbackURL'] + str(pk))
+            user['CallbackURL'])
 
         if result.Status == 100:
             return ('https://sandbox.zarinpal.com/pg/StartPay/' + str(result.Authority))
@@ -25,10 +25,6 @@ class ZarinpalGateway(BaseGateway):
     def verify(user):
         result = zarinpal_client.service.PaymentVerificationWithExtra(user['merchant'], user['authority'],
                                                                       user['amount'])
+        verify_result = {'status': result.Status, 'reference_id': result.RefID}
 
-        if result.Status == 100:
-            return True
-        elif result.Status == 101:
-            return ('Transaction submitted : ' + str(result.Status))
-        else:
-            return ('Transaction failed.\nStatus: ' + str(result.Status))
+        return verify_result
