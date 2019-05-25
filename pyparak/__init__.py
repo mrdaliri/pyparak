@@ -1,10 +1,8 @@
 from zeep import Client
 
-zarinpal_client = Client('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl')
-
 
 class BaseGateway(object):
-    def send(self):
+    def send(self, data):
         raise NotImplementedError()
 
     def verify(self):
@@ -12,19 +10,45 @@ class BaseGateway(object):
 
 
 class ZarinpalGateway(BaseGateway):
-    def send(user):
-        result = zarinpal_client.service.PaymentRequest(
-            user['merchant'], user['amount'], user['description'], user['email'], user['mobile'],
-            user['CallbackURL'])
+
+    def __init__(self):
+        self.client = Client('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl')
+
+    def send(self, data):
+        result = self.client.service.PaymentRequest(
+            data['merchant'], data['amount'], data['description'], data['email'], data['mobile'],
+            data['callback'])
 
         if result.Status == 100:
-            return ('https://sandbox.zarinpal.com/pg/StartPay/' + str(result.Authority))
+            return {'authority': result.Authority,
+                    'url': 'https://sandbox.zarinpal.com/pg/StartPay/{0}'.format(result.Authority)}
         else:
-            return ('Error code: ' + str(result.Status))
+            raise Exception(self.error_code(result.Status))
 
-    def verify(user):
-        result = zarinpal_client.service.PaymentVerificationWithExtra(user['merchant'], user['authority'],
-                                                                      user['amount'])
-        verify_result = {'status': result.Status, 'reference_id': result.RefID}
+    def verify(self, data):
+        result = self.client.service.PaymentVerificationWithExtra(data['merchant'], data['authority'],
+                                                                  data['amount'])
+        if result.Status == 100:
+            return {'status': result.Status, 'reference_id': result.RefID}
+        else:
+            raise Exception(self.error_code(result.Status))
 
-        return verify_result
+    def confirm(self, data):
+        if data['query_params']['Status'] == 'OK':
+            verify_data = {'merchant': data['merchant'], 'amount': data['payment'].amount,
+                           'authority': data['payment'].authority}
+            return self.verify(verify_data)
+
+        else:
+            raise Exception(self.error_code(-22))
+
+    def error_code(self, code):
+        switcher = {
+            101: "Transaction submitted.",
+            -42: "Time out validation",
+            -22: "Transaction canceled by user",
+            -11: "request not found",
+            -3: "Payment value error",
+            -1: "ّInformation send is incomplete",
+        }
+        return switcher.get(code, "error not found")
