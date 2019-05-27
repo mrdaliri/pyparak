@@ -15,19 +15,17 @@ class ZarinpalGateway(BaseGateway):
         self.client = Client('https://sandbox.zarinpal.com/pg/services/WebGate/wsdl')
 
     def send(self, data):
-        result = self.client.service.PaymentRequest(
-            data['merchant'], data['amount'], data['description'], data['email'], data['mobile'],
-            data['callback'])
+        result = self.client.service.PaymentRequest(data['merchant'], data['amount'], data['description'],
+                                                    data['email'], data['mobile'], data['callback'])
 
-        if result.Status == 100:
+        if result.Status == 100 and len(result.Authority) == 36:
             return {'authority': result.Authority,
                     'url': 'https://sandbox.zarinpal.com/pg/StartPay/{0}'.format(result.Authority)}
         else:
             raise Exception(self.error_code(result.Status))
 
     def verify(self, data):
-        result = self.client.service.PaymentVerificationWithExtra(data['merchant'], data['authority'],
-                                                                  data['amount'])
+        result = self.client.service.PaymentVerificationWithExtra(data['merchant'], data['authority'], data['amount'])
         if result.Status == 100:
             return {'status': result.Status, 'reference_id': result.RefID}
         else:
