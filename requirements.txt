@@ -1,2 +1,0 @@
-setuptools==41.0.1
-zeep==3.3.1
